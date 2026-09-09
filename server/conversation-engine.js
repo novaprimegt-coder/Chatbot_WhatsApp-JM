@@ -14,12 +14,10 @@ function includesAny(text, phrases) {
   return phrases.some(phrase => text.includes(normalize(phrase)));
 }
 
-
 function detectIntent(message) {
   const text = normalize(message);
   if (!text) return 'unknown';
-
-  if (includesAny(text, ['asesor', 'persona', 'humano', 'hablar con alguien', 'atencion humana', 'servicio al cliente'])) return 'human_support';
+  if (includesAny(text, ['asesor', 'persona', 'humano', 'hablar con alguien', 'atencion humana', 'servicio al cliente'])) return 'automation_scope';
   if (includesAny(text, ['pago', 'pagar', 'deposito', 'transferencia', 'metodo de pago', 'cuenta bancaria'])) return 'payment_methods';
   if (includesAny(text, ['problema', 'pedido', 'orden', 'no me llego', 'no recibí', 'reclamo'])) return 'order_problem';
   if (includesAny(text, ['comprar', 'quiero', 'adquirir', 'compra'])) return 'purchase';
@@ -50,10 +48,7 @@ function findMentionedProducts(message, products) {
 function listProducts(products, currency, onlyAvailable = false) {
   const selected = onlyAvailable ? products.filter(product => product.available) : products;
   if (!selected.length) return null;
-  return selected.map(product => {
-    const status = product.available ? 'Disponible' : 'No disponible';
-    return `• ${product.name} — ${money(product.price, currency)} — ${status}`;
-  }).join('\n');
+  return selected.map(product => `• ${product.name} — ${money(product.price, currency)} — ${product.available ? 'Disponible' : 'No disponible'}`).join('\n');
 }
 
 function buildReply({ message, knowledgeBase }) {
@@ -69,50 +64,50 @@ function buildReply({ message, knowledgeBase }) {
 
   switch (intent) {
     case 'greeting':
-      return { intent, text: business.welcomeMessage || `¡Hola! Gracias por comunicarte con ${business.name || 'JM Cruz L. Digital'}. ¿En qué podemos ayudarte?`, requestHuman: false };
+      return { intent, text: business.welcomeMessage || `¡Hola! Gracias por comunicarte con ${business.name || 'JM Cruz L. Digital'}. ¿En qué podemos ayudarte?` };
 
     case 'prices': {
       const source = mentioned.length ? mentioned : products;
       const list = listProducts(source, currency, false);
-      return { intent, text: list ? `Estos son los precios registrados actualmente:\n${list}` : (quick.noProducts || 'Todavía no hay productos registrados.'), requestHuman: false };
+      return { intent, text: list ? `Estos son los precios registrados actualmente:\n${list}` : (quick.noProducts || 'Todavía no hay productos registrados.') };
     }
 
     case 'availability': {
       if (mentioned.length) {
         const lines = mentioned.map(product => `• ${product.name}: ${product.available ? 'Disponible' : 'No disponible'}`);
-        return { intent, text: `Disponibilidad registrada:\n${lines.join('\n')}`, requestHuman: false };
+        return { intent, text: `Disponibilidad registrada:\n${lines.join('\n')}` };
       }
       const list = listProducts(products, currency, true);
-      return { intent, text: list ? `Productos marcados como disponibles:\n${list}` : 'No hay productos marcados como disponibles en este momento.', requestHuman: false };
+      return { intent, text: list ? `Productos marcados como disponibles:\n${list}` : 'No hay productos marcados como disponibles en este momento.' };
     }
 
     case 'payment_methods': {
-      if (!payments.length) return { intent, text: quick.noPaymentMethods || 'Todavía no hay métodos de pago registrados.', requestHuman: false };
+      if (!payments.length) return { intent, text: quick.noPaymentMethods || 'Todavía no hay métodos de pago registrados.' };
       const lines = payments.map(method => `• ${method.name}${method.details ? `: ${method.details}` : ''}`);
-      return { intent, text: `Métodos de pago registrados:\n${lines.join('\n')}\n\nImportante: un mensaje o comprobante enviado por el cliente no se considera pago confirmado automáticamente.`, requestHuman: false };
+      return { intent, text: `Métodos de pago registrados:\n${lines.join('\n')}\n\nImportante: un mensaje o comprobante enviado por el cliente no se considera pago confirmado automáticamente.` };
     }
 
     case 'purchase': {
-      if (!mentioned.length) return { intent, text: quick.purchase || 'Indícame qué producto deseas comprar.', requestHuman: false };
+      if (!mentioned.length) return { intent, text: quick.purchase || 'Indícame qué producto deseas comprar.' };
       const product = mentioned[0];
-      if (!product.available) return { intent, text: `${product.name} figura como no disponible. No puedo prometer existencias que no estén registradas.`, requestHuman: false };
-      return { intent, text: `${product.name} figura como disponible por ${money(product.price, currency)}. Puedo orientarte con el proceso, pero no confirmaré pago ni pedido hasta que exista una validación registrada.`, requestHuman: false };
+      if (!product.available) return { intent, text: `${product.name} figura como no disponible. No puedo prometer existencias que no estén registradas.` };
+      return { intent, text: `${product.name} figura como disponible por ${money(product.price, currency)}. Puedo darte únicamente la información registrada para este producto; no confirmaré pagos ni pedidos sin una validación registrada.` };
     }
 
     case 'promotions': {
-      if (!promotions.length) return { intent, text: 'No hay promociones activas registradas en este momento.', requestHuman: false };
+      if (!promotions.length) return { intent, text: 'No hay promociones activas registradas en este momento.' };
       const lines = promotions.map(promo => `• ${promo.title}${promo.description ? `: ${promo.description}` : ''}`);
-      return { intent, text: `Promociones activas registradas:\n${lines.join('\n')}`, requestHuman: false };
+      return { intent, text: `Promociones activas registradas:\n${lines.join('\n')}` };
     }
 
     case 'order_problem':
-      return { intent, text: quick.orderProblem || 'Puedo registrar que necesitas ayuda con un pedido. No confirmaré pagos ni estados sin datos verificados.', requestHuman: true };
+      return { intent, text: quick.orderProblem || 'Este canal responde automáticamente con la información registrada. No puedo confirmar pagos, estados o soluciones de pedidos que no estén registrados.' };
 
-    case 'human_support':
-      return { intent, text: business.humanMessage || 'La automatización quedará pausada para que una persona continúe contigo.', requestHuman: true };
+    case 'automation_scope':
+      return { intent, text: quick.automationScope || 'Este número funciona con atención automática. Respondo únicamente con la información registrada en JM Cruz L. Digital y no permite respuesta manual desde este sistema.' };
 
     default:
-      return { intent: 'unknown', text: business.unknownMessage || 'No tengo información registrada para responder eso con seguridad.', requestHuman: false };
+      return { intent: 'unknown', text: business.unknownMessage || 'No tengo información registrada para responder eso con seguridad.' };
   }
 }
 

@@ -1,8 +1,8 @@
 {
   "name": "jm-cruz-whatsapp-bot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "Sistema local base de atención automática para WhatsApp de JM Cruz L. Digital",
+  "description": "Sistema de atención automática para WhatsApp de JM Cruz L. Digital, sin respuesta manual desde el panel",
   "main": "server/server.js",
   "type": "commonjs",
   "scripts": {

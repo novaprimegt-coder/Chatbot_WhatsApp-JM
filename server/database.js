@@ -10,22 +10,7 @@ const KNOWLEDGE_FILE = path.join(DATA_DIR, 'knowledge-base.json');
 
 function ensureFile(filePath, fallback) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), 'utf8');
-  }
-}
-
-function readJson(filePath, fallback) {
-  ensureFile(filePath, fallback);
-  try {
-    const raw = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(raw);
-  } catch (error) {
-    const backup = `${filePath}.corrupt-${Date.now()}`;
-    try { fs.copyFileSync(filePath, backup); } catch (_) {}
-    atomicWriteJson(filePath, fallback);
-    return structuredClone(fallback);
-  }
+  if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), 'utf8');
 }
 
 function atomicWriteJson(filePath, value) {
@@ -34,8 +19,24 @@ function atomicWriteJson(filePath, value) {
   fs.renameSync(temp, filePath);
 }
 
+function readJson(filePath, fallback) {
+  ensureFile(filePath, fallback);
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    const backup = `${filePath}.corrupt-${Date.now()}`;
+    try { fs.copyFileSync(filePath, backup); } catch (_) {}
+    atomicWriteJson(filePath, fallback);
+    return structuredClone(fallback);
+  }
+}
+
 function loadStore() {
-  return readJson(STORE_FILE, { customers: [], conversations: [], orders: [], audit: [] });
+  const store = readJson(STORE_FILE, { customers: [], conversations: [], orders: [], audit: [], processedMessageIds: [] });
+  for (const key of ['customers', 'conversations', 'orders', 'audit', 'processedMessageIds']) {
+    if (!Array.isArray(store[key])) store[key] = [];
+  }
+  return store;
 }
 
 function saveStore(store) {
@@ -50,21 +51,16 @@ function getKnowledgeBase() {
 }
 
 function validateKnowledgeBase(input) {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) {
-    throw new Error('La base de conocimiento debe ser un objeto JSON válido.');
-  }
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('La base de conocimiento debe ser un objeto JSON válido.');
   const result = structuredClone(input);
   result.business = result.business && typeof result.business === 'object' ? result.business : {};
   result.business.name = String(result.business.name || 'JM Cruz L. Digital').trim();
   result.business.description = String(result.business.description || '').trim();
   result.business.currency = String(result.business.currency || 'GTQ').trim().toUpperCase();
   result.business.welcomeMessage = String(result.business.welcomeMessage || '').trim();
-  result.business.humanMessage = String(result.business.humanMessage || '').trim();
   result.business.unknownMessage = String(result.business.unknownMessage || '').trim();
 
-  for (const key of ['products', 'paymentMethods', 'promotions']) {
-    if (!Array.isArray(result[key])) result[key] = [];
-  }
+  for (const key of ['products', 'paymentMethods', 'promotions']) if (!Array.isArray(result[key])) result[key] = [];
   result.quickReplies = result.quickReplies && typeof result.quickReplies === 'object' ? result.quickReplies : {};
 
   result.products = result.products.map((product, index) => ({
@@ -98,13 +94,8 @@ function saveKnowledgeBase(input) {
   return validated;
 }
 
-function nowIso() {
-  return new Date().toISOString();
-}
-
-function id(prefix) {
-  return `${prefix}_${crypto.randomUUID()}`;
-}
+function nowIso() { return new Date().toISOString(); }
+function id(prefix) { return `${prefix}_${crypto.randomUUID()}`; }
 
 function upsertCustomer(phone, displayName = '') {
   const store = loadStore();
@@ -126,16 +117,8 @@ function getOrCreateConversation(phone, displayName = '') {
   let conversation = store.conversations.find(item => item.customerId === customer.id && item.status !== 'closed');
   if (!conversation) {
     conversation = {
-      id: id('con'),
-      customerId: customer.id,
-      phone,
-      displayName: customer.displayName,
-      status: 'open',
-      humanMode: false,
-      messages: [],
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
-      lastInteractionAt: nowIso()
+      id: id('con'), customerId: customer.id, phone, displayName: customer.displayName,
+      status: 'open', messages: [], createdAt: nowIso(), updatedAt: nowIso(), lastInteractionAt: nowIso()
     };
     store.conversations.push(conversation);
     saveStore(store);
@@ -163,29 +146,18 @@ function appendMessage(conversationId, message) {
 }
 
 function listConversations() {
-  const store = loadStore();
-  return [...store.conversations]
-    .sort((a, b) => String(b.lastInteractionAt).localeCompare(String(a.lastInteractionAt)));
+  return [...loadStore().conversations].sort((a, b) => String(b.lastInteractionAt).localeCompare(String(a.lastInteractionAt)));
 }
 
-function setHumanMode(conversationId, humanMode) {
+function markMessageProcessed(messageId) {
+  const normalized = String(messageId || '').trim();
+  if (!normalized) return true;
   const store = loadStore();
-  const conversation = store.conversations.find(item => item.id === conversationId);
-  if (!conversation) throw new Error('Conversación no encontrada.');
-  conversation.humanMode = Boolean(humanMode);
-  conversation.updatedAt = nowIso();
-  store.audit.push({
-    id: id('aud'),
-    action: conversation.humanMode ? 'human_mode_enabled' : 'human_mode_disabled',
-    conversationId,
-    createdAt: nowIso()
-  });
+  if (store.processedMessageIds.includes(normalized)) return false;
+  store.processedMessageIds.push(normalized);
+  if (store.processedMessageIds.length > 2000) store.processedMessageIds = store.processedMessageIds.slice(-2000);
   saveStore(store);
-  return conversation;
-}
-
-function getConversation(conversationId) {
-  return loadStore().conversations.find(item => item.id === conversationId) || null;
+  return true;
 }
 
 function getStats() {
@@ -194,7 +166,6 @@ function getStats() {
     customers: store.customers.length,
     conversations: store.conversations.length,
     openConversations: store.conversations.filter(item => item.status === 'open').length,
-    humanMode: store.conversations.filter(item => item.humanMode).length,
     orders: store.orders.length
   };
 }
@@ -205,7 +176,6 @@ module.exports = {
   getOrCreateConversation,
   appendMessage,
   listConversations,
-  setHumanMode,
-  getConversation,
+  markMessageProcessed,
   getStats
 };

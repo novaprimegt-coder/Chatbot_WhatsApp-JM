@@ -1,19 +1,19 @@
 {
   "business": {
     "name": "JM Cruz L. Digital",
-    "description": "Plataformas digitales",
+    "description": "Plataformas y productos digitales",
     "currency": "GTQ",
-    "welcomeMessage": "¡Hola! Gracias por comunicarte con JM Cruz L. Digital. ¿En qué podemos ayudarte?",
-    "humanMessage": "He pausado la respuesta automática para que una persona pueda continuar contigo.",
-    "unknownMessage": "No tengo información registrada para responder eso con seguridad. Puedes pedir precios, disponibilidad, métodos de pago o atención humana."
+    "welcomeMessage": "¡Hola! Gracias por comunicarte con JM Cruz L. Digital. Este número responde automáticamente con la información registrada.",
+    "unknownMessage": "No tengo información registrada para responder eso con seguridad. Puedes consultar precios, disponibilidad, métodos de pago o promociones."
   },
   "products": [],
   "paymentMethods": [],
   "promotions": [],
   "quickReplies": {
-    "purchase": "Indícame qué producto deseas comprar y te mostraré únicamente la información registrada.",
-    "orderProblem": "Puedo registrar que necesitas ayuda con un pedido. Para protegerte, no confirmaré pagos ni estados de pedido sin datos verificados.",
-    "noProducts": "Todavía no hay productos registrados en el panel administrativo.",
-    "noPaymentMethods": "Todavía no hay métodos de pago registrados en el panel administrativo."
+    "noProducts": "Todavía no hay productos registrados.",
+    "noPaymentMethods": "Todavía no hay métodos de pago registrados.",
+    "purchase": "Indícame qué producto deseas consultar.",
+    "orderProblem": "Este canal responde automáticamente con la información registrada. No puedo confirmar pagos, estados o soluciones de pedidos que no estén registrados.",
+    "automationScope": "Este número funciona con atención automática. Respondo únicamente con la información registrada en JM Cruz L. Digital y no permite respuesta manual desde este sistema."
   }
 }

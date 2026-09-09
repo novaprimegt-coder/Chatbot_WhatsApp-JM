@@ -19,15 +19,14 @@ function loadEnvFile() {
     if (index < 1) continue;
     const key = trimmed.slice(0, index).trim();
     let value = trimmed.slice(index + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) value = value.slice(1, -1);
     if (!(key in process.env)) process.env[key] = value;
   }
 }
 
 loadEnvFile();
 
+const VERSION = '1.1.0';
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '127.0.0.1';
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -58,7 +57,7 @@ function text(res, status, body, contentType = 'text/plain; charset=utf-8') {
   res.end(output);
 }
 
-function readJsonBody(req) {
+function readJsonBody(req, includeRaw = false) {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks = [];
@@ -72,9 +71,11 @@ function readJsonBody(req) {
       chunks.push(chunk);
     });
     req.on('end', () => {
-      if (!chunks.length) return resolve({});
+      const rawBody = Buffer.concat(chunks);
+      if (!rawBody.length) return resolve(includeRaw ? { body: {}, rawBody } : {});
       try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+        const body = JSON.parse(rawBody.toString('utf8'));
+        resolve(includeRaw ? { body, rawBody } : body);
       } catch (_) {
         reject(Object.assign(new Error('JSON inválido.'), { statusCode: 400 }));
       }
@@ -90,28 +91,9 @@ function safePhone(value) {
 async function processIncoming({ phone, name = '', messageText, source = 'local' }) {
   const conversation = db.getOrCreateConversation(phone, name);
   db.appendMessage(conversation.id, { direction: 'inbound', source, text: messageText });
-
-  const current = db.getConversation(conversation.id);
-  if (current.humanMode) {
-    return { conversationId: conversation.id, humanMode: true, skippedAutomation: true, reply: null };
-  }
-
   const result = engine.buildReply({ message: messageText, knowledgeBase: db.getKnowledgeBase() });
-  if (result.requestHuman) db.setHumanMode(conversation.id, true);
   db.appendMessage(conversation.id, { direction: 'outbound', source: 'automation', text: result.text, intent: result.intent });
-
-  return {
-    conversationId: conversation.id,
-    humanMode: Boolean(result.requestHuman),
-    skippedAutomation: false,
-    reply: result.text,
-    intent: result.intent
-  };
-}
-
-function routeParam(pathname, pattern) {
-  const match = pathname.match(pattern);
-  return match ? decodeURIComponent(match[1]) : null;
+  return { conversationId: conversation.id, reply: result.text, intent: result.intent };
 }
 
 function serveIndex(res) {
@@ -133,23 +115,19 @@ function serveIndex(res) {
 async function handleWebhookPayload(payload) {
   const incoming = whatsapp.extractIncomingMessages(payload);
   for (const message of incoming) {
-    if (!message.from) continue;
+    if (!message.from || !whatsapp.isForConfiguredNumber(message.phoneNumberId)) continue;
+    if (message.id && !db.markMessageProcessed(message.id)) continue;
     try {
       if (message.unsupported) {
         const conversation = db.getOrCreateConversation(message.from, message.name);
-        db.appendMessage(conversation.id, { direction: 'inbound', source: 'whatsapp', text: `[Mensaje ${message.type} no procesado en V1.0.0]` });
-        const current = db.getConversation(conversation.id);
-        if (!current.humanMode) {
-          const reply = 'Por ahora puedo responder automáticamente mensajes de texto. Para este tipo de mensaje se requiere atención humana.';
-          db.setHumanMode(conversation.id, true);
-          db.appendMessage(conversation.id, { direction: 'outbound', source: 'automation', text: reply, intent: 'human_support' });
-          await whatsapp.sendText({ to: message.from, text: reply });
-        }
+        db.appendMessage(conversation.id, { direction: 'inbound', source: 'whatsapp', text: `[Mensaje ${message.type} no procesado]` });
+        const reply = 'Este canal responde automáticamente únicamente mensajes de texto con la información registrada en JM Cruz L. Digital.';
+        db.appendMessage(conversation.id, { direction: 'outbound', source: 'automation', text: reply, intent: 'unsupported_message' });
+        await whatsapp.sendText({ to: message.from, text: reply });
         continue;
       }
-
       const result = await processIncoming({ phone: message.from, name: message.name, messageText: message.text, source: 'whatsapp' });
-      if (result.reply) await whatsapp.sendText({ to: message.from, text: result.reply });
+      await whatsapp.sendText({ to: message.from, text: result.reply });
     } catch (error) {
       console.error('[WEBHOOK ERROR]', error.message);
     }
@@ -162,39 +140,21 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (req.method === 'GET' && pathname === '/health') {
-      return json(res, 200, { ok: true, service: 'JM Cruz L. Digital WhatsApp Bot', version: '1.0.0', whatsapp: whatsapp.configurationStatus() });
+      return json(res, 200, { ok: true, service: 'JM Cruz L. Digital WhatsApp Bot', version: VERSION, automaticOnly: true, whatsapp: whatsapp.configurationStatus() });
     }
 
     if (req.method === 'GET' && pathname === '/api/dashboard') {
-      return json(res, 200, {
-        ok: true,
-        version: '1.0.0',
-        stats: db.getStats(),
-        whatsapp: whatsapp.configurationStatus(),
-        knowledgeBase: db.getKnowledgeBase()
-      });
+      return json(res, 200, { ok: true, version: VERSION, automaticOnly: true, stats: db.getStats(), whatsapp: whatsapp.configurationStatus(), knowledgeBase: db.getKnowledgeBase() });
     }
 
-    if (req.method === 'GET' && pathname === '/api/knowledge-base') {
-      return json(res, 200, { ok: true, data: db.getKnowledgeBase() });
-    }
+    if (req.method === 'GET' && pathname === '/api/knowledge-base') return json(res, 200, { ok: true, data: db.getKnowledgeBase() });
 
     if (req.method === 'PUT' && pathname === '/api/knowledge-base') {
       const body = await readJsonBody(req);
-      const saved = db.saveKnowledgeBase(body);
-      return json(res, 200, { ok: true, data: saved });
+      return json(res, 200, { ok: true, data: db.saveKnowledgeBase(body) });
     }
 
-    if (req.method === 'GET' && pathname === '/api/conversations') {
-      return json(res, 200, { ok: true, data: db.listConversations() });
-    }
-
-    const humanModeId = routeParam(pathname, /^\/api\/conversations\/([^/]+)\/human-mode$/);
-    if (req.method === 'POST' && humanModeId) {
-      const body = await readJsonBody(req);
-      const conversation = db.setHumanMode(humanModeId, Boolean(body.humanMode));
-      return json(res, 200, { ok: true, data: conversation });
-    }
+    if (req.method === 'GET' && pathname === '/api/conversations') return json(res, 200, { ok: true, data: db.listConversations() });
 
     if (req.method === 'POST' && pathname === '/api/simulate') {
       const body = await readJsonBody(req);
@@ -212,15 +172,15 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && pathname === '/webhook/whatsapp') {
-      const payload = await readJsonBody(req);
+      const { body, rawBody } = await readJsonBody(req, true);
+      const signature = req.headers['x-hub-signature-256'];
+      if (!whatsapp.verifyWebhookSignature({ rawBody, signature })) return text(res, 401, 'Firma de webhook inválida.');
       text(res, 200, 'EVENT_RECEIVED');
-      setImmediate(() => handleWebhookPayload(payload));
+      setImmediate(() => handleWebhookPayload(body));
       return;
     }
 
-    if (pathname.startsWith('/api/') || pathname.startsWith('/webhook/')) {
-      return json(res, 404, { ok: false, error: 'Ruta no encontrada.' });
-    }
+    if (pathname.startsWith('/api/') || pathname.startsWith('/webhook/')) return json(res, 404, { ok: false, error: 'Ruta no encontrada.' });
 
     if (req.method === 'GET' || req.method === 'HEAD') {
       if (req.method === 'HEAD') {
@@ -239,8 +199,9 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log('');
-  console.log('JM Cruz L. Digital — WhatsApp Bot V1.0.0');
+  console.log(`JM Cruz L. Digital — WhatsApp Bot V${VERSION}`);
   console.log(`Panel local: http://${HOST}:${PORT}`);
   console.log(`Modo WhatsApp: ${whatsapp.configurationStatus().mode}`);
+  console.log('Respuesta manual desde el sistema: deshabilitada');
   console.log('');
 });

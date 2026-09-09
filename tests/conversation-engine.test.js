@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const { detectIntent, buildReply } = require('../server/conversation-engine');
 
 const kb = {
-  business: { name: 'JM Cruz L. Digital', currency: 'GTQ', welcomeMessage: 'Bienvenido', humanMessage: 'Humano', unknownMessage: 'Sin datos' },
+  business: { name: 'JM Cruz L. Digital', currency: 'GTQ', welcomeMessage: 'Bienvenido', unknownMessage: 'Sin datos' },
   products: [
     { id: 'spotify', name: 'Spotify', price: 34.99, available: true, description: '' },
     { id: 'netflix', name: 'Netflix', price: 50, available: false, description: '' }
@@ -15,10 +15,10 @@ const kb = {
   quickReplies: { noProducts: 'No products', noPaymentMethods: 'No payments' }
 };
 
-test('detecta intenciones principales', () => {
+test('detecta intenciones principales y mantiene atención solo automática', () => {
   assert.equal(detectIntent('Hola buenas tardes'), 'greeting');
   assert.equal(detectIntent('¿Cuánto cuesta Spotify?'), 'prices');
-  assert.equal(detectIntent('Quiero hablar con una persona'), 'human_support');
+  assert.equal(detectIntent('Quiero hablar con una persona'), 'automation_scope');
 });
 
 test('precio sale únicamente de la base de conocimiento', () => {
@@ -34,9 +34,17 @@ test('no promete disponibilidad inexistente', () => {
   assert.match(result.text, /no disponible/i);
 });
 
-test('problema de pedido deriva a modo humano', () => {
+test('problema de pedido se responde automáticamente sin modo humano', () => {
   const result = buildReply({ message: 'Tengo un problema con mi pedido', knowledgeBase: kb });
-  assert.equal(result.requestHuman, true);
+  assert.equal(result.intent, 'order_problem');
+  assert.equal(Object.hasOwn(result, 'requestHuman'), false);
+  assert.match(result.text, /automáticamente|automaticamente/i);
+});
+
+test('solicitud de persona no habilita respuesta manual', () => {
+  const result = buildReply({ message: 'Necesito un asesor humano', knowledgeBase: kb });
+  assert.equal(result.intent, 'automation_scope');
+  assert.match(result.text, /atención automática|atencion automatica/i);
 });
 
 test('respuesta desconocida no inventa información', () => {

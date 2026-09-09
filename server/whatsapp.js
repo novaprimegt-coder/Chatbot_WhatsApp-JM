@@ -1,13 +1,20 @@
 'use strict';
 
 const https = require('https');
+const crypto = require('crypto');
 
 function getMode() {
   return String(process.env.WHATSAPP_MODE || 'mock').toLowerCase();
 }
 
 function configurationStatus() {
-  const required = ['META_GRAPH_VERSION', 'WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_VERIFY_TOKEN'];
+  const required = [
+    'META_GRAPH_VERSION',
+    'META_APP_SECRET',
+    'WHATSAPP_PHONE_NUMBER_ID',
+    'WHATSAPP_ACCESS_TOKEN',
+    'WHATSAPP_VERIFY_TOKEN'
+  ];
   const missing = required.filter(key => !process.env[key]);
   return {
     mode: getMode(),
@@ -16,15 +23,31 @@ function configurationStatus() {
   };
 }
 
-function verifyWebhook(req) {
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
-  const challenge = req.query['hub.challenge'];
+function verifyWebhook({ query }) {
+  const mode = query['hub.mode'];
+  const token = query['hub.verify_token'];
+  const challenge = query['hub.challenge'];
   const expected = process.env.WHATSAPP_VERIFY_TOKEN;
 
   if (!expected) return { ok: false, status: 503, body: 'WHATSAPP_VERIFY_TOKEN no configurado.' };
   if (mode === 'subscribe' && token === expected) return { ok: true, status: 200, body: challenge };
   return { ok: false, status: 403, body: 'Verificación rechazada.' };
+}
+
+function verifyWebhookSignature({ rawBody, signature }) {
+  if (getMode() !== 'live') return true;
+  const secret = String(process.env.META_APP_SECRET || '');
+  if (!secret || !signature || !Buffer.isBuffer(rawBody)) return false;
+  const expected = `sha256=${crypto.createHmac('sha256', secret).update(rawBody).digest('hex')}`;
+  const provided = String(signature);
+  if (provided.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+}
+
+function isForConfiguredNumber(phoneNumberId) {
+  if (getMode() !== 'live') return true;
+  const configured = String(process.env.WHATSAPP_PHONE_NUMBER_ID || '');
+  return Boolean(configured && String(phoneNumberId || '') === configured);
 }
 
 function extractIncomingMessages(payload) {
@@ -34,6 +57,7 @@ function extractIncomingMessages(payload) {
     const changes = Array.isArray(entry?.changes) ? entry.changes : [];
     for (const change of changes) {
       const value = change?.value || {};
+      const phoneNumberId = value?.metadata?.phone_number_id || '';
       const contacts = Array.isArray(value.contacts) ? value.contacts : [];
       const messages = Array.isArray(value.messages) ? value.messages : [];
       for (const message of messages) {
@@ -43,6 +67,7 @@ function extractIncomingMessages(payload) {
             id: message.id || '',
             from: message.from || '',
             name: contact?.profile?.name || '',
+            phoneNumberId,
             type: message.type || 'unknown',
             text: '',
             unsupported: true
@@ -53,6 +78,7 @@ function extractIncomingMessages(payload) {
           id: message.id || '',
           from: message.from || '',
           name: contact?.profile?.name || '',
+          phoneNumberId,
           type: 'text',
           text: message?.text?.body || '',
           unsupported: false
@@ -78,7 +104,13 @@ function sendText({ to, text }) {
   const version = process.env.META_GRAPH_VERSION;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
-  const body = JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'text', text: { body: text } });
+  const body = JSON.stringify({
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to,
+    type: 'text',
+    text: { body: text }
+  });
 
   return new Promise((resolve, reject) => {
     const request = https.request({
@@ -106,4 +138,11 @@ function sendText({ to, text }) {
   });
 }
 
-module.exports = { configurationStatus, verifyWebhook, extractIncomingMessages, sendText };
+module.exports = {
+  configurationStatus,
+  verifyWebhook,
+  verifyWebhookSignature,
+  isForConfiguredNumber,
+  extractIncomingMessages,
+  sendText
+};
