@@ -61,9 +61,9 @@ Las credenciales privadas nunca deben subirse al repositorio.
 
 ## GitHub y GitHub Pages
 
-El código está alojado únicamente en `novaprimegt-coder/Chatbot_WhatsApp-JM` durante esta etapa. La raíz contiene `index.html` y `.nojekyll` para que GitHub Pages pueda mostrar la vista pública del panel desde `main/(root)`.
+El código está alojado únicamente en `novaprimegt-coder/Chatbot_WhatsApp-JM` durante esta etapa. La raíz contiene `index.html` y `.nojekyll` para que GitHub Pages pueda mostrar la vista pública del panel desde `gh-pages/(root)`.
 
-**Importante:** GitHub Pages es alojamiento estático. Sirve para ver la interfaz y el avance, pero no ejecuta `server/server.js`, no puede recibir el webhook real de Meta y no mantiene el bot activo 24/7. Para conectar el número de forma operativa hará falta, en la fase correspondiente, un entorno HTTPS que ejecute Node.js. El código de esa conexión ya queda preparado en esta versión.
+**Importante:** GitHub Pages es alojamiento estático. La V1.2.0 hace operativas las funciones del panel y el simulador directamente en el navegador, pero Pages no ejecuta `server/server.js`, no puede recibir el webhook real de Meta y no mantiene el bot activo 24/7. Para conectar el número de forma operativa hará falta, en la fase correspondiente, un entorno HTTPS que ejecute Node.js. El código de esa conexión ya queda preparado.
 
 ## Archivos principales
 
