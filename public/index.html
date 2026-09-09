@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>JM Cruz L. Digital · WhatsApp Bot</title>
+  <style>
+    :root{--bg:#061017;--panel:#0b1720;--panel2:#0f202b;--line:#173846;--text:#ecfbff;--muted:#8eb0ba;--cyan:#12d9ec;--green:#2de69a;--danger:#ff6377;--shadow:0 20px 60px rgba(0,0,0,.32)}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at 15% 10%,rgba(18,217,236,.12),transparent 28%),radial-gradient(circle at 85% 12%,rgba(45,230,154,.08),transparent 24%),var(--bg);color:var(--text);min-height:100vh}
+    button,input,textarea,select{font:inherit} button{cursor:pointer}.shell{max-width:1480px;margin:0 auto;padding:24px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:24px}.brand{display:flex;align-items:center;gap:14px}.mark{width:50px;height:50px;border:1px solid rgba(18,217,236,.45);border-radius:16px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(18,217,236,.18),rgba(45,230,154,.08));box-shadow:0 0 35px rgba(18,217,236,.12);font-weight:900;color:var(--cyan)}.brand h1{margin:0;font-size:1.15rem}.brand p{margin:3px 0 0;color:var(--muted);font-size:.88rem}.status{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}.pill{border:1px solid var(--line);background:rgba(11,23,32,.8);border-radius:999px;padding:8px 12px;color:var(--muted);font-size:.82rem}.pill strong{color:var(--text)}
+    .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}.card{background:linear-gradient(180deg,rgba(15,32,43,.94),rgba(9,23,31,.94));border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}.stat{padding:16px}.stat span{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.08em}.stat b{display:block;font-size:1.8rem;margin-top:7px}.grid{display:grid;grid-template-columns:1.12fr .88fr;gap:16px}.section{padding:20px}.section h2{font-size:1rem;margin:0 0 6px}.section .sub{margin:0 0 18px;color:var(--muted);font-size:.88rem}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.tab{border:1px solid var(--line);background:#0a1720;color:var(--muted);padding:9px 12px;border-radius:12px}.tab.active{border-color:rgba(18,217,236,.55);color:var(--text);background:rgba(18,217,236,.08)}.pane{display:none}.pane.active{display:block}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:7px}.field.full{grid-column:1/-1}.field label{font-size:.78rem;color:var(--muted)}input,textarea,select{width:100%;background:#07131b;border:1px solid var(--line);color:var(--text);border-radius:12px;padding:11px 12px;outline:none}input:focus,textarea:focus,select:focus{border-color:rgba(18,217,236,.65);box-shadow:0 0 0 3px rgba(18,217,236,.08)}textarea{resize:vertical;min-height:84px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.btn{border:1px solid var(--line);background:#102633;color:var(--text);padding:10px 14px;border-radius:12px}.btn.primary{border-color:transparent;background:linear-gradient(135deg,var(--cyan),#24a9ec);color:#00151b;font-weight:800}.btn.danger{border-color:rgba(255,99,119,.35);color:#ff95a4;background:rgba(255,99,119,.08)}.btn.small{padding:7px 10px;font-size:.8rem}.editor-list{display:grid;gap:10px}.row{border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(4,15,21,.5)}.row-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.row-title{font-weight:800}.row-grid{display:grid;grid-template-columns:1.3fr .7fr .6fr;gap:8px}.row-grid.payment{grid-template-columns:1fr 1.4fr .5fr}.row-grid.promo{grid-template-columns:1fr 1.4fr .5fr}.empty{border:1px dashed var(--line);border-radius:14px;padding:18px;color:var(--muted);text-align:center}.sim{display:grid;gap:12px}.chat{height:430px;overflow:auto;border:1px solid var(--line);background:#061119;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}.bubble{max-width:82%;padding:10px 12px;border-radius:14px;white-space:pre-wrap;line-height:1.4;font-size:.9rem}.bubble.user{align-self:flex-end;background:rgba(18,217,236,.13);border:1px solid rgba(18,217,236,.22)}.bubble.bot{align-self:flex-start;background:#10222e;border:1px solid var(--line)}.bubble.system{align-self:center;background:transparent;color:var(--muted);font-size:.78rem}.send{display:grid;grid-template-columns:1fr auto;gap:10px}.conversation-list{display:grid;gap:10px;max-height:510px;overflow:auto}.conversation{border:1px solid var(--line);border-radius:14px;padding:12px;background:#07141c}.conversation .meta{display:flex;align-items:center;justify-content:space-between;gap:10px}.conversation .phone{font-weight:800}.conversation .time{font-size:.75rem;color:var(--muted)}.conversation .preview{margin:8px 0 10px;color:var(--muted);font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:.72rem;border:1px solid var(--line)}.badge.human{color:#ffd58e;border-color:rgba(255,213,142,.3);background:rgba(255,213,142,.07)}.badge.auto{color:#7ff0c1;border-color:rgba(127,240,193,.25);background:rgba(127,240,193,.06)}.notice{margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid rgba(18,217,236,.2);background:rgba(18,217,236,.05);color:var(--muted);font-size:.82rem;line-height:1.45}.notice strong{color:var(--text)}.toast{position:fixed;right:20px;bottom:20px;padding:12px 16px;border-radius:12px;background:#102633;border:1px solid var(--line);box-shadow:var(--shadow);display:none;z-index:20}.toast.show{display:block}.toast.error{border-color:rgba(255,99,119,.45);color:#ff9cab}@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:1fr}}@media(max-width:700px){.shell{padding:14px}.topbar{align-items:flex-start;flex-direction:column}.status{justify-content:flex-start}.stats{grid-template-columns:1fr 1fr}.form-grid,.row-grid,.row-grid.payment,.row-grid.promo{grid-template-columns:1fr}.field.full{grid-column:auto}.chat{height:360px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><div class="mark">JM</div><div><h1>JM Cruz L. Digital</h1><p>Sistema de atención automática de WhatsApp · V1.0.0</p></div></div>
+      <div class="status"><div class="pill">Servidor: <strong id="serverStatus">cargando…</strong></div><div class="pill">WhatsApp: <strong id="waMode">cargando…</strong></div><div class="pill">Conexión real: <strong id="waConfigured">cargando…</strong></div></div>
+    </header>
+
+    <section class="stats">
+      <article class="card stat"><span>Clientes</span><b id="statCustomers">0</b></article>
+      <article class="card stat"><span>Conversaciones</span><b id="statConversations">0</b></article>
+      <article class="card stat"><span>Abiertas</span><b id="statOpen">0</b></article>
+      <article class="card stat"><span>Modo humano</span><b id="statHuman">0</b></article>
+      <article class="card stat"><span>Pedidos</span><b id="statOrders">0</b></article>
+    </section>
+
+    <section class="grid">
+      <article class="card section">
+        <h2>Base de conocimiento controlada</h2>
+        <p class="sub">Todo precio, disponibilidad, promoción y método de pago que use la automatización sale de aquí.</p>
+        <div class="tabs">
+          <button class="tab active" data-tab="business">Negocio</button>
+          <button class="tab" data-tab="products">Productos</button>
+          <button class="tab" data-tab="payments">Pagos</button>
+          <button class="tab" data-tab="promotions">Promociones</button>
+        </div>
+
+        <div class="pane active" id="pane-business">
+          <div class="form-grid">
+            <div class="field"><label>Nombre</label><input id="businessName"></div>
+            <div class="field"><label>Moneda</label><input id="businessCurrency" maxlength="6"></div>
+            <div class="field full"><label>Descripción</label><input id="businessDescription"></div>
+            <div class="field full"><label>Mensaje de bienvenida</label><textarea id="welcomeMessage"></textarea></div>
+            <div class="field full"><label>Mensaje al pasar a humano</label><textarea id="humanMessage"></textarea></div>
+            <div class="field full"><label>Respuesta cuando no hay información suficiente</label><textarea id="unknownMessage"></textarea></div>
+          </div>
+        </div>
+
+        <div class="pane" id="pane-products"><div id="productsList" class="editor-list"></div><div class="actions"><button id="addProduct" class="btn">+ Agregar producto</button></div></div>
+        <div class="pane" id="pane-payments"><div id="paymentsList" class="editor-list"></div><div class="actions"><button id="addPayment" class="btn">+ Agregar método de pago</button></div></div>
+        <div class="pane" id="pane-promotions"><div id="promotionsList" class="editor-list"></div><div class="actions"><button id="addPromotion" class="btn">+ Agregar promoción</button></div></div>
+
+        <div class="actions"><button id="saveKnowledge" class="btn primary">Guardar cambios</button><button id="reloadKnowledge" class="btn">Descartar cambios locales</button></div>
+        <div class="notice"><strong>Regla de seguridad:</strong> el motor no crea precios ni disponibilidad. Si un dato no está registrado, responde que no dispone de información suficiente. Tampoco confirma pagos automáticamente.</div>
+      </article>
+
+      <article class="card section">
+        <h2>Simulador local</h2>
+        <p class="sub">Prueba el flujo completo sin conectar todavía un número real de WhatsApp.</p>
+        <div class="sim">
+          <div class="field"><label>Número simulado</label><input id="simPhone" value="50255550000" inputmode="tel"></div>
+          <div id="chat" class="chat"><div class="bubble system">El simulador usa el mismo motor que recibirá los mensajes reales.</div></div>
+          <div class="send"><input id="simMessage" placeholder="Ej.: ¿Qué precios tienen?"><button id="sendSim" class="btn primary">Enviar</button></div>
+        </div>
+      </article>
+
+      <article class="card section">
+        <h2>Conversaciones</h2>
+        <p class="sub">El modo humano pausa únicamente la automatización de esa conversación.</p>
+        <div id="conversationsList" class="conversation-list"></div>
+      </article>
+
+      <article class="card section">
+        <h2>Estado técnico V1.0.0</h2>
+        <p class="sub">Base local estable antes de conectar credenciales externas.</p>
+        <div class="editor-list">
+          <div class="row"><div class="row-head"><div class="row-title">Webhook oficial</div><span class="badge auto">Preparado</span></div><div class="sub">Rutas GET/POST listas para verificación y recepción de mensajes.</div></div>
+          <div class="row"><div class="row-head"><div class="row-title">Motor conversacional</div><span class="badge auto">Activo</span></div><div class="sub">Saludo, precios, disponibilidad, compra, pagos, promociones, problemas de pedido y atención humana.</div></div>
+          <div class="row"><div class="row-head"><div class="row-title">Persistencia local</div><span class="badge auto">Activa</span></div><div class="sub">Clientes, conversaciones, mensajes y auditoría se guardan en archivos JSON locales.</div></div>
+          <div class="row"><div class="row-head"><div class="row-title">Conexión real de Meta</div><span class="badge human">Pendiente</span></div><div class="sub">Se habilitará únicamente cuando existan credenciales oficiales. V1.0.0 inicia en modo mock.</div></div>
+        </div>
+      </article>
+    </section>
+  </main>
+  <div id="toast" class="toast"></div>
+
+<script>
+'use strict';
+let kb = null;
+
+const $ = (id) => document.getElementById(id);
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+const uid = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+
+function toast(message, error = false){const el=$('toast');el.textContent=message;el.className=`toast show${error?' error':''}`;clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>el.className='toast',2600)}
+
+async function api(url, options={}){
+  const response = await fetch(url,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});
+  let body={}; try{body=await response.json()}catch(_){body={ok:false,error:'Respuesta inválida del servidor.'}}
+  if(!response.ok || body.ok===false) throw new Error(body.error || `HTTP ${response.status}`);
+  return body;
+}
+
+function bindTabs(){document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));btn.classList.add('active');$(`pane-${btn.dataset.tab}`).classList.add('active')}))}
+
+function renderBusiness(){const b=kb.business||{};$('businessName').value=b.name||'';$('businessCurrency').value=b.currency||'GTQ';$('businessDescription').value=b.description||'';$('welcomeMessage').value=b.welcomeMessage||'';$('humanMessage').value=b.humanMessage||'';$('unknownMessage').value=b.unknownMessage||''}
+
+function renderProducts(){const box=$('productsList');const items=kb.products||[];if(!items.length){box.innerHTML='<div class="empty">No hay productos registrados.</div>';return}box.innerHTML=items.map((p,i)=>`<div class="row" data-product-index="${i}"><div class="row-head"><div class="row-title">Producto ${i+1}</div><button class="btn danger small" data-remove-product="${i}">Eliminar</button></div><div class="row-grid"><input data-product-name="${i}" value="${escapeHtml(p.name)}" placeholder="Nombre"><input data-product-price="${i}" type="number" min="0" step="0.01" value="${p.price ?? ''}" placeholder="Precio"><select data-product-available="${i}"><option value="true" ${p.available?'selected':''}>Disponible</option><option value="false" ${!p.available?'selected':''}>No disponible</option></select></div><div class="field" style="margin-top:8px"><input data-product-description="${i}" value="${escapeHtml(p.description||'')}" placeholder="Descripción opcional"></div></div>`).join('');bindDynamicButtons()}
+
+function renderPayments(){const box=$('paymentsList');const items=kb.paymentMethods||[];if(!items.length){box.innerHTML='<div class="empty">No hay métodos de pago registrados.</div>';return}box.innerHTML=items.map((p,i)=>`<div class="row"><div class="row-head"><div class="row-title">Método ${i+1}</div><button class="btn danger small" data-remove-payment="${i}">Eliminar</button></div><div class="row-grid payment"><input data-payment-name="${i}" value="${escapeHtml(p.name)}" placeholder="Nombre"><input data-payment-details="${i}" value="${escapeHtml(p.details||'')}" placeholder="Datos visibles para el cliente"><select data-payment-enabled="${i}"><option value="true" ${p.enabled!==false?'selected':''}>Activo</option><option value="false" ${p.enabled===false?'selected':''}>Inactivo</option></select></div></div>`).join('');bindDynamicButtons()}
+
+function renderPromotions(){const box=$('promotionsList');const items=kb.promotions||[];if(!items.length){box.innerHTML='<div class="empty">No hay promociones registradas.</div>';return}box.innerHTML=items.map((p,i)=>`<div class="row"><div class="row-head"><div class="row-title">Promoción ${i+1}</div><button class="btn danger small" data-remove-promotion="${i}">Eliminar</button></div><div class="row-grid promo"><input data-promo-title="${i}" value="${escapeHtml(p.title)}" placeholder="Título"><input data-promo-description="${i}" value="${escapeHtml(p.description||'')}" placeholder="Descripción"><select data-promo-active="${i}"><option value="true" ${p.active?'selected':''}>Activa</option><option value="false" ${!p.active?'selected':''}>Inactiva</option></select></div></div>`).join('');bindDynamicButtons()}
+
+function bindDynamicButtons(){document.querySelectorAll('[data-remove-product]').forEach(btn=>btn.onclick=()=>{syncEditors();kb.products.splice(Number(btn.dataset.removeProduct),1);renderProducts()});document.querySelectorAll('[data-remove-payment]').forEach(btn=>btn.onclick=()=>{syncEditors();kb.paymentMethods.splice(Number(btn.dataset.removePayment),1);renderPayments()});document.querySelectorAll('[data-remove-promotion]').forEach(btn=>btn.onclick=()=>{syncEditors();kb.promotions.splice(Number(btn.dataset.removePromotion),1);renderPromotions()})}
+
+function syncEditors(){if(!kb)return;kb.business={...(kb.business||{}),name:$('businessName').value.trim(),currency:$('businessCurrency').value.trim().toUpperCase()||'GTQ',description:$('businessDescription').value.trim(),welcomeMessage:$('welcomeMessage').value.trim(),humanMessage:$('humanMessage').value.trim(),unknownMessage:$('unknownMessage').value.trim()};(kb.products||[]).forEach((p,i)=>{const n=document.querySelector(`[data-product-name="${i}"]`);if(!n)return;p.name=n.value.trim();const price=document.querySelector(`[data-product-price="${i}"]`).value;p.price=price===''?null:Number(price);p.available=document.querySelector(`[data-product-available="${i}"]`).value==='true';p.description=document.querySelector(`[data-product-description="${i}"]`).value.trim()});(kb.paymentMethods||[]).forEach((p,i)=>{const n=document.querySelector(`[data-payment-name="${i}"]`);if(!n)return;p.name=n.value.trim();p.details=document.querySelector(`[data-payment-details="${i}"]`).value.trim();p.enabled=document.querySelector(`[data-payment-enabled="${i}"]`).value==='true'});(kb.promotions||[]).forEach((p,i)=>{const n=document.querySelector(`[data-promo-title="${i}"]`);if(!n)return;p.title=n.value.trim();p.description=document.querySelector(`[data-promo-description="${i}"]`).value.trim();p.active=document.querySelector(`[data-promo-active="${i}"]`).value==='true'})}
+
+function renderAllEditors(){renderBusiness();renderProducts();renderPayments();renderPromotions()}
+
+async function loadDashboard(){try{const result=await api('/api/dashboard');kb=result.knowledgeBase;$('serverStatus').textContent='activo';$('waMode').textContent=result.whatsapp.mode;$('waConfigured').textContent=result.whatsapp.configured?'sí':'no';$('statCustomers').textContent=result.stats.customers;$('statConversations').textContent=result.stats.conversations;$('statOpen').textContent=result.stats.openConversations;$('statHuman').textContent=result.stats.humanMode;$('statOrders').textContent=result.stats.orders;renderAllEditors();await loadConversations()}catch(error){$('serverStatus').textContent='error';toast(error.message,true)}}
+
+async function saveKnowledge(){try{syncEditors();const result=await api('/api/knowledge-base',{method:'PUT',body:JSON.stringify(kb)});kb=result.data;renderAllEditors();toast('Base de conocimiento guardada.')}catch(error){toast(error.message,true)}}
+
+async function loadConversations(){try{const result=await api('/api/conversations');const box=$('conversationsList');if(!result.data.length){box.innerHTML='<div class="empty">Aún no hay conversaciones.</div>';return}box.innerHTML=result.data.map(c=>{const last=c.messages?.[c.messages.length-1];return `<div class="conversation"><div class="meta"><div><div class="phone">${escapeHtml(c.displayName||c.phone)}</div><div class="time">${escapeHtml(c.phone)} · ${new Date(c.lastInteractionAt).toLocaleString()}</div></div><span class="badge ${c.humanMode?'human':'auto'}">${c.humanMode?'Humano':'Automático'}</span></div><div class="preview">${escapeHtml(last?.text||'Sin mensajes')}</div><button class="btn small" data-human-id="${c.id}" data-human-mode="${c.humanMode?'false':'true'}">${c.humanMode?'Reactivar automatización':'Pasar a humano'}</button></div>`}).join('');document.querySelectorAll('[data-human-id]').forEach(btn=>btn.onclick=async()=>{try{await api(`/api/conversations/${btn.dataset.humanId}/human-mode`,{method:'POST',body:JSON.stringify({humanMode:btn.dataset.humanMode==='true'})});await loadDashboard();toast('Estado de conversación actualizado.')}catch(error){toast(error.message,true)}})}catch(error){toast(error.message,true)}}
+
+function addBubble(text,type){const el=document.createElement('div');el.className=`bubble ${type}`;el.textContent=text;$('chat').appendChild(el);$('chat').scrollTop=$('chat').scrollHeight}
+
+async function sendSimulation(){const input=$('simMessage');const text=input.value.trim();if(!text)return;addBubble(text,'user');input.value='';try{const result=await api('/api/simulate',{method:'POST',body:JSON.stringify({phone:$('simPhone').value,text})});if(result.data.reply)addBubble(result.data.reply,'bot');else if(result.data.skippedAutomation)addBubble('Automatización pausada: esta conversación está en modo humano.','system');await loadDashboard()}catch(error){addBubble(`Error: ${error.message}`,'system')}}
+
+$('addProduct').onclick=()=>{syncEditors();kb.products=kb.products||[];kb.products.push({id:uid('product'),name:'',price:null,available:false,description:''});renderProducts()};
+$('addPayment').onclick=()=>{syncEditors();kb.paymentMethods=kb.paymentMethods||[];kb.paymentMethods.push({id:uid('payment'),name:'',details:'',enabled:true});renderPayments()};
+$('addPromotion').onclick=()=>{syncEditors();kb.promotions=kb.promotions||[];kb.promotions.push({id:uid('promo'),title:'',description:'',active:false});renderPromotions()};
+$('saveKnowledge').onclick=saveKnowledge;$('reloadKnowledge').onclick=loadDashboard;$('sendSim').onclick=sendSimulation;$('simMessage').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();sendSimulation()}});bindTabs();loadDashboard();
+</script>
+</body>
+</html>
