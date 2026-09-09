@@ -55,4 +55,4 @@ La conexión real se activará en una fase posterior mediante variables privadas
 
 ## Alcance exacto de V1.0.0
 
-Esta versión es la base local. No conecta todavía cuentas reales de Meta, no usa Supabase, no publica en GitHub y no ejecuta despliegue 24/7. Esos pasos requieren autorización y configuración posteriores.
+Esta versión es la base local y su código fuente ya está publicado en el repositorio autorizado `novaprimegt-coder/Chatbot_WhatsApp-JM`. No conecta todavía cuentas reales de Meta, no usa Supabase y no ejecuta despliegue 24/7. Esos pasos requieren autorización y configuración posteriores.
