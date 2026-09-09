@@ -13,6 +13,7 @@
 - Pausa de automatización por conversación (modo humano).
 - Webhook oficial preparado.
 - Envío real encapsulado y desactivado por defecto.
+- Código fuente V1.0.0 publicado íntegramente en el repositorio autorizado `novaprimegt-coder/Chatbot_WhatsApp-JM`.
 
 ### Reglas de seguridad incorporadas
 - No inventar precios.
@@ -26,7 +27,6 @@
 - Credenciales reales de Meta.
 - Autenticación del panel para Internet.
 - Supabase.
-- GitHub.
 - Integración con tienda central.
 - Validación automatizada de pagos.
 - Pedidos transaccionales completos.
