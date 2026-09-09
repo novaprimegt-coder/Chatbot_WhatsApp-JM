@@ -7,19 +7,58 @@ function getMode() {
   return String(process.env.WHATSAPP_MODE || 'mock').toLowerCase();
 }
 
+function parseJsonArray(value) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function getConfiguredNumbers() {
+  const multi = parseJsonArray(process.env.WHATSAPP_NUMBERS_JSON)
+    .map((item, index) => ({
+      profileId: String(item?.profileId || `number-${index + 1}`).trim(),
+      phoneNumberId: String(item?.phoneNumberId || '').trim(),
+      accessToken: String(item?.accessToken || '').trim()
+    }))
+    .filter(item => item.phoneNumberId && item.accessToken);
+
+  if (multi.length) return multi;
+
+  const legacyPhoneNumberId = String(process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
+  const legacyAccessToken = String(process.env.WHATSAPP_ACCESS_TOKEN || '').trim();
+  if (legacyPhoneNumberId && legacyAccessToken) {
+    return [{ profileId: 'default', phoneNumberId: legacyPhoneNumberId, accessToken: legacyAccessToken }];
+  }
+
+  return [];
+}
+
+function getAppSecrets() {
+  const fromJson = parseJsonArray(process.env.META_APP_SECRETS_JSON)
+    .map(value => String(value || '').trim())
+    .filter(Boolean);
+  const legacy = String(process.env.META_APP_SECRET || '').trim();
+  return [...new Set([...fromJson, legacy].filter(Boolean))];
+}
+
 function configurationStatus() {
-  const required = [
-    'META_GRAPH_VERSION',
-    'META_APP_SECRET',
-    'WHATSAPP_PHONE_NUMBER_ID',
-    'WHATSAPP_ACCESS_TOKEN',
-    'WHATSAPP_VERIFY_TOKEN'
-  ];
-  const missing = required.filter(key => !process.env[key]);
+  const missing = [];
+  if (!process.env.META_GRAPH_VERSION) missing.push('META_GRAPH_VERSION');
+  if (!process.env.WHATSAPP_VERIFY_TOKEN) missing.push('WHATSAPP_VERIFY_TOKEN');
+  if (!getAppSecrets().length) missing.push('META_APP_SECRET o META_APP_SECRETS_JSON');
+  const numbers = getConfiguredNumbers();
+  if (!numbers.length) missing.push('WHATSAPP_NUMBERS_JSON');
+
   return {
     mode: getMode(),
     configured: missing.length === 0,
-    missing
+    missing,
+    configuredNumbers: numbers.map(item => ({ profileId: item.profileId, phoneNumberId: item.phoneNumberId })),
+    numberCount: numbers.length
   };
 }
 
@@ -36,18 +75,26 @@ function verifyWebhook({ query }) {
 
 function verifyWebhookSignature({ rawBody, signature }) {
   if (getMode() !== 'live') return true;
-  const secret = String(process.env.META_APP_SECRET || '');
-  if (!secret || !signature || !Buffer.isBuffer(rawBody)) return false;
-  const expected = `sha256=${crypto.createHmac('sha256', secret).update(rawBody).digest('hex')}`;
+  if (!signature || !Buffer.isBuffer(rawBody)) return false;
   const provided = String(signature);
-  if (provided.length !== expected.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+
+  for (const secret of getAppSecrets()) {
+    const expected = `sha256=${crypto.createHmac('sha256', secret).update(rawBody).digest('hex')}`;
+    if (provided.length !== expected.length) continue;
+    if (crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected))) return true;
+  }
+  return false;
+}
+
+function resolveNumberConfig(phoneNumberId) {
+  const normalized = String(phoneNumberId || '').trim();
+  if (!normalized) return null;
+  return getConfiguredNumbers().find(item => item.phoneNumberId === normalized) || null;
 }
 
 function isForConfiguredNumber(phoneNumberId) {
   if (getMode() !== 'live') return true;
-  const configured = String(process.env.WHATSAPP_PHONE_NUMBER_ID || '');
-  return Boolean(configured && String(phoneNumberId || '') === configured);
+  return Boolean(resolveNumberConfig(phoneNumberId));
 }
 
 function extractIncomingMessages(payload) {
@@ -89,11 +136,11 @@ function extractIncomingMessages(payload) {
   return results;
 }
 
-function sendText({ to, text }) {
+function sendText({ to, text, phoneNumberId }) {
   const mode = getMode();
   if (mode !== 'live') {
-    console.log(`[WHATSAPP MOCK] -> ${to}: ${text}`);
-    return Promise.resolve({ mock: true, to, text });
+    console.log(`[WHATSAPP MOCK ${phoneNumberId || 'sin-id'}] -> ${to}: ${text}`);
+    return Promise.resolve({ mock: true, to, text, phoneNumberId: phoneNumberId || '' });
   }
 
   const status = configurationStatus();
@@ -101,9 +148,13 @@ function sendText({ to, text }) {
     return Promise.reject(new Error(`Configuración de WhatsApp incompleta: ${status.missing.join(', ')}`));
   }
 
+  const numberConfig = resolveNumberConfig(phoneNumberId);
+  if (!numberConfig) {
+    return Promise.reject(new Error(`Phone Number ID no configurado: ${phoneNumberId || '(vacío)'}`));
+  }
+
   const version = process.env.META_GRAPH_VERSION;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const token = process.env.WHATSAPP_ACCESS_TOKEN;
+  const token = numberConfig.accessToken;
   const body = JSON.stringify({
     messaging_product: 'whatsapp',
     recipient_type: 'individual',
@@ -115,7 +166,7 @@ function sendText({ to, text }) {
   return new Promise((resolve, reject) => {
     const request = https.request({
       hostname: 'graph.facebook.com',
-      path: `/${version}/${phoneNumberId}/messages`,
+      path: `/${version}/${numberConfig.phoneNumberId}/messages`,
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -140,6 +191,9 @@ function sendText({ to, text }) {
 
 module.exports = {
   configurationStatus,
+  getConfiguredNumbers,
+  getAppSecrets,
+  resolveNumberConfig,
   verifyWebhook,
   verifyWebhookSignature,
   isForConfiguredNumber,
