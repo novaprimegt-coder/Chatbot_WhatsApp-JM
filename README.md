@@ -1,4 +1,4 @@
-# JM Cruz L. Digital — WhatsApp Bot V1.1.0
+# JM Cruz L. Digital — WhatsApp Bot V1.2.0
 
 Sistema de atención automática para el número oficial de WhatsApp que se conecte a JM Cruz L. Digital. El panel no permite responder manualmente a clientes: el sistema únicamente genera respuestas automáticas a partir de la información registrada.
 
@@ -16,6 +16,10 @@ Sistema de atención automática para el número oficial de WhatsApp que se cone
 - Protección básica contra procesamiento duplicado de un mismo `wamid`.
 - Envío de respuestas exclusivamente al remitente del mensaje entrante; no existe endpoint de respuesta manual.
 - GitHub Pages preparado como vista pública del avance del panel.
+
+## GitHub Pages operativo
+
+En V1.2.0 el panel publicado en GitHub Pages permite editar productos, precios, disponibilidad, métodos de pago y promociones, guardar la configuración en el navegador y usar el simulador automático. Las conversaciones simuladas y estadísticas también se conservan localmente en el dispositivo. Esto no sustituye el backend HTTPS necesario para recibir webhooks reales de Meta.
 
 ## Regla funcional permanente de esta versión
 
@@ -64,10 +68,11 @@ El código está alojado únicamente en `novaprimegt-coder/Chatbot_WhatsApp-JM` 
 ## Archivos principales
 
 - `index.html`: entrada para GitHub Pages.
-- `public/index.html`: panel HTML dual: backend real cuando existe API y vista de solo lectura en GitHub Pages.
+- `public/index.html`: panel HTML dual: backend real cuando existe API y panel operativo en GitHub Pages.
+- `public/pages-engine.js`: motor conversacional usado directamente por el simulador en GitHub Pages.
 - `server/server.js`: servidor, API y webhook.
 - `server/whatsapp.js`: validación de Meta, filtro del número y envío automático.
 - `server/conversation-engine.js`: detección de intención y respuestas controladas.
 - `server/database.js`: persistencia local e idempotencia de mensajes.
-- `data/knowledge-base.json`: única fuente controlada de información comercial.
+- `data/knowledge-base.json`: fuente controlada inicial de información comercial.
 - `data/store.json`: clientes, conversaciones, pedidos, auditoría e IDs procesados.
