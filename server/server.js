@@ -26,7 +26,7 @@ function loadEnvFile() {
 
 loadEnvFile();
 
-const VERSION = '1.1.0';
+const VERSION = '1.3.0';
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '127.0.0.1';
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -88,12 +88,30 @@ function safePhone(value) {
   return String(value || '').replace(/[^0-9+]/g, '').slice(0, 25) || 'local-demo';
 }
 
-async function processIncoming({ phone, name = '', messageText, source = 'local' }) {
-  const conversation = db.getOrCreateConversation(phone, name);
+async function processIncoming({ phone, name = '', messageText, source = 'local', profileId = 'default', phoneNumberId = '' }) {
+  const profile = db.getNumberProfileById(profileId);
+  if (!profile || profile.enabled === false) throw new Error('El perfil de número indicado no está disponible.');
+  const conversation = db.getOrCreateConversation(phone, name, { profileId: profile.id, phoneNumberId });
   db.appendMessage(conversation.id, { direction: 'inbound', source, text: messageText });
-  const result = engine.buildReply({ message: messageText, knowledgeBase: db.getKnowledgeBase() });
+  const result = engine.buildReply({ message: messageText, knowledgeBase: profile.knowledgeBase });
   db.appendMessage(conversation.id, { direction: 'outbound', source: 'automation', text: result.text, intent: result.intent });
-  return { conversationId: conversation.id, reply: result.text, intent: result.intent };
+  return { conversationId: conversation.id, profileId: profile.id, reply: result.text, intent: result.intent };
+}
+
+function servePublicFile(res, filePath, contentType) {
+  try {
+    const body = fs.readFileSync(filePath);
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Content-Length': body.length,
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY'
+    });
+    res.end(body);
+  } catch (error) {
+    text(res, 500, `No se pudo cargar el recurso: ${error.message}`);
+  }
 }
 
 function serveIndex(res) {
@@ -117,17 +135,31 @@ async function handleWebhookPayload(payload) {
   for (const message of incoming) {
     if (!message.from || !whatsapp.isForConfiguredNumber(message.phoneNumberId)) continue;
     if (message.id && !db.markMessageProcessed(message.id)) continue;
+
+    const profile = db.getNumberProfileByPhoneNumberId(message.phoneNumberId);
+    if (!profile || profile.enabled === false) {
+      console.error(`[WEBHOOK] No existe perfil activo para Phone Number ID ${message.phoneNumberId}`);
+      continue;
+    }
+
     try {
       if (message.unsupported) {
-        const conversation = db.getOrCreateConversation(message.from, message.name);
+        const conversation = db.getOrCreateConversation(message.from, message.name, { profileId: profile.id, phoneNumberId: message.phoneNumberId });
         db.appendMessage(conversation.id, { direction: 'inbound', source: 'whatsapp', text: `[Mensaje ${message.type} no procesado]` });
         const reply = 'Este canal responde automáticamente únicamente mensajes de texto con la información registrada en JM Cruz L. Digital.';
         db.appendMessage(conversation.id, { direction: 'outbound', source: 'automation', text: reply, intent: 'unsupported_message' });
-        await whatsapp.sendText({ to: message.from, text: reply });
+        await whatsapp.sendText({ to: message.from, text: reply, phoneNumberId: message.phoneNumberId });
         continue;
       }
-      const result = await processIncoming({ phone: message.from, name: message.name, messageText: message.text, source: 'whatsapp' });
-      await whatsapp.sendText({ to: message.from, text: result.reply });
+      const result = await processIncoming({
+        phone: message.from,
+        name: message.name,
+        messageText: message.text,
+        source: 'whatsapp',
+        profileId: profile.id,
+        phoneNumberId: message.phoneNumberId
+      });
+      await whatsapp.sendText({ to: message.from, text: result.reply, phoneNumberId: message.phoneNumberId });
     } catch (error) {
       console.error('[WEBHOOK ERROR]', error.message);
     }
@@ -140,18 +172,45 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (req.method === 'GET' && pathname === '/health') {
-      return json(res, 200, { ok: true, service: 'JM Cruz L. Digital WhatsApp Bot', version: VERSION, automaticOnly: true, whatsapp: whatsapp.configurationStatus() });
+      return json(res, 200, {
+        ok: true,
+        service: 'JM Cruz L. Digital WhatsApp Bot',
+        version: VERSION,
+        automaticOnly: true,
+        multiNumber: true,
+        whatsapp: whatsapp.configurationStatus(),
+        numberProfiles: db.getNumberProfiles().map(({ knowledgeBase, ...profile }) => profile)
+      });
     }
 
     if (req.method === 'GET' && pathname === '/api/dashboard') {
-      return json(res, 200, { ok: true, version: VERSION, automaticOnly: true, stats: db.getStats(), whatsapp: whatsapp.configurationStatus(), knowledgeBase: db.getKnowledgeBase() });
+      return json(res, 200, {
+        ok: true,
+        version: VERSION,
+        automaticOnly: true,
+        multiNumber: true,
+        stats: db.getStats(),
+        whatsapp: whatsapp.configurationStatus(),
+        numberProfiles: db.getNumberProfiles()
+      });
     }
 
-    if (req.method === 'GET' && pathname === '/api/knowledge-base') return json(res, 200, { ok: true, data: db.getKnowledgeBase() });
+    if (req.method === 'GET' && pathname === '/api/number-profiles') return json(res, 200, { ok: true, data: db.getNumberProfiles() });
+
+    if (req.method === 'PUT' && pathname === '/api/number-profiles') {
+      const body = await readJsonBody(req);
+      return json(res, 200, { ok: true, data: db.saveNumberProfiles(body) });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/knowledge-base') {
+      const profileId = String(requestUrl.searchParams.get('profileId') || 'default');
+      return json(res, 200, { ok: true, data: db.getKnowledgeBase(profileId) });
+    }
 
     if (req.method === 'PUT' && pathname === '/api/knowledge-base') {
       const body = await readJsonBody(req);
-      return json(res, 200, { ok: true, data: db.saveKnowledgeBase(body) });
+      const profileId = String(requestUrl.searchParams.get('profileId') || 'default');
+      return json(res, 200, { ok: true, data: db.saveKnowledgeBase(body, profileId) });
     }
 
     if (req.method === 'GET' && pathname === '/api/conversations') return json(res, 200, { ok: true, data: db.listConversations() });
@@ -161,7 +220,17 @@ const server = http.createServer(async (req, res) => {
       const messageText = String(body.text || '').trim();
       if (!messageText) return json(res, 400, { ok: false, error: 'Escribe un mensaje para simular.' });
       const phone = safePhone(body.phone || '50200000000');
-      const result = await processIncoming({ phone, name: 'Cliente de prueba', messageText, source: 'simulator' });
+      const profileId = String(body.profileId || 'default');
+      const profile = db.getNumberProfileById(profileId);
+      if (!profile) return json(res, 404, { ok: false, error: 'Perfil de número no encontrado.' });
+      const result = await processIncoming({
+        phone,
+        name: 'Cliente de prueba',
+        messageText,
+        source: 'simulator',
+        profileId: profile.id,
+        phoneNumberId: profile.phoneNumberId
+      });
       return json(res, 200, { ok: true, data: result });
     }
 
@@ -181,6 +250,10 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname.startsWith('/api/') || pathname.startsWith('/webhook/')) return json(res, 404, { ok: false, error: 'Ruta no encontrada.' });
+
+    if (req.method === 'GET' && pathname === '/pages-engine.js') {
+      return servePublicFile(res, path.join(PUBLIC_DIR, 'pages-engine.js'), 'application/javascript; charset=utf-8');
+    }
 
     if (req.method === 'GET' || req.method === 'HEAD') {
       if (req.method === 'HEAD') {
@@ -202,6 +275,7 @@ server.listen(PORT, HOST, () => {
   console.log(`JM Cruz L. Digital — WhatsApp Bot V${VERSION}`);
   console.log(`Panel local: http://${HOST}:${PORT}`);
   console.log(`Modo WhatsApp: ${whatsapp.configurationStatus().mode}`);
+  console.log(`Números configurados en Meta: ${whatsapp.configurationStatus().numberCount}`);
   console.log('Respuesta manual desde el sistema: deshabilitada');
   console.log('');
 });
