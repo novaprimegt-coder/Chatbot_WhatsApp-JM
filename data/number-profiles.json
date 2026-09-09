@@ -1,0 +1,30 @@
+{
+  "profiles": [
+    {
+      "id": "default",
+      "label": "Número principal",
+      "displayPhone": "",
+      "phoneNumberId": "",
+      "enabled": true,
+      "knowledgeBase": {
+        "business": {
+          "name": "JM Cruz L. Digital",
+          "description": "Plataformas y productos digitales",
+          "currency": "GTQ",
+          "welcomeMessage": "¡Hola! Gracias por comunicarte con JM Cruz L. Digital. Este número responde automáticamente con la información registrada.",
+          "unknownMessage": "No tengo información registrada para responder eso con seguridad. Puedes consultar precios, disponibilidad, métodos de pago o promociones."
+        },
+        "products": [],
+        "paymentMethods": [],
+        "promotions": [],
+        "quickReplies": {
+          "noProducts": "Todavía no hay productos registrados.",
+          "noPaymentMethods": "Todavía no hay métodos de pago registrados.",
+          "purchase": "Indícame qué producto deseas consultar.",
+          "orderProblem": "Este canal responde automáticamente con la información registrada. No puedo confirmar pagos, estados o soluciones de pedidos que no estén registrados.",
+          "automationScope": "Este número funciona con atención automática. Respondo únicamente con la información registrada en JM Cruz L. Digital y no permite respuesta manual desde este sistema."
+        }
+      }
+    }
+  ]
+}
