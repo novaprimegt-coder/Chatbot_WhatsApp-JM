@@ -1,5 +1,20 @@
 # Historial de cambios — JM Cruz L. Digital WhatsApp Bot
 
+## V1.2.0 — GitHub Pages operativo
+
+### Corrección solicitada
+- Se eliminaron los bloqueos que deshabilitaban los controles en GitHub Pages.
+- Productos, métodos de pago y promociones pueden agregarse, editarse y eliminarse desde la plataforma publicada.
+- Guardar cambios funciona en GitHub Pages mediante almacenamiento local del navegador.
+- El simulador funciona directamente en GitHub Pages usando el mismo motor determinista de conversación.
+- Las conversaciones simuladas y estadísticas funcionan y se conservan en el dispositivo.
+- Se añadieron validaciones de campos y número de prueba.
+- Se mantiene la prohibición de respuesta manual.
+- Se añadió `public/pages-engine.js` y prueba automatizada equivalente al motor del backend.
+
+### Límite técnico preservado
+- GitHub Pages continúa siendo alojamiento estático: la conexión real de WhatsApp requiere ejecutar el backend HTTPS para recibir webhooks y proteger credenciales.
+
 ## V1.1.0 — Automatización exclusiva + preparación de conexión
 
 ### Cambio solicitado
