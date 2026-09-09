@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const STORE_FILE = path.join(DATA_DIR, 'store.json');
 const KNOWLEDGE_FILE = path.join(DATA_DIR, 'knowledge-base.json');
+const NUMBER_PROFILES_FILE = path.join(DATA_DIR, 'number-profiles.json');
 
 function ensureFile(filePath, fallback) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -31,6 +32,13 @@ function readJson(filePath, fallback) {
   }
 }
 
+function defaultKnowledgeBase() {
+  return {
+    business: { name: 'JM Cruz L. Digital', description: '', currency: 'GTQ', welcomeMessage: '', unknownMessage: '' },
+    products: [], paymentMethods: [], promotions: [], quickReplies: {}
+  };
+}
+
 function loadStore() {
   const store = readJson(STORE_FILE, { customers: [], conversations: [], orders: [], audit: [], processedMessageIds: [] });
   for (const key of ['customers', 'conversations', 'orders', 'audit', 'processedMessageIds']) {
@@ -43,11 +51,8 @@ function saveStore(store) {
   atomicWriteJson(STORE_FILE, store);
 }
 
-function getKnowledgeBase() {
-  return readJson(KNOWLEDGE_FILE, {
-    business: { name: 'JM Cruz L. Digital', currency: 'GTQ' },
-    products: [], paymentMethods: [], promotions: [], quickReplies: {}
-  });
+function getLegacyKnowledgeBase() {
+  return readJson(KNOWLEDGE_FILE, defaultKnowledgeBase());
 }
 
 function validateKnowledgeBase(input) {
@@ -88,9 +93,93 @@ function validateKnowledgeBase(input) {
   return result;
 }
 
-function saveKnowledgeBase(input) {
+function initialProfiles() {
+  return [{
+    id: 'default',
+    label: 'Número principal',
+    displayPhone: '',
+    phoneNumberId: '',
+    enabled: true,
+    knowledgeBase: validateKnowledgeBase(getLegacyKnowledgeBase())
+  }];
+}
+
+function validateNumberProfiles(input) {
+  const source = Array.isArray(input) ? input : input?.profiles;
+  if (!Array.isArray(source)) throw new Error('Los perfiles de números deben enviarse como una lista válida.');
+  if (!source.length) throw new Error('Debe existir al menos un número/perfil configurado.');
+  if (source.length > 50) throw new Error('Se admite un máximo de 50 perfiles de números por instalación.');
+
+  const ids = new Set();
+  const phoneIds = new Set();
+  const profiles = source.map((profile, index) => {
+    const id = String(profile?.id || `number-${index + 1}`).trim();
+    const label = String(profile?.label || `Número ${index + 1}`).trim();
+    const displayPhone = String(profile?.displayPhone || '').replace(/[^0-9+ ]/g, '').trim().slice(0, 30);
+    const phoneNumberId = String(profile?.phoneNumberId || '').replace(/\D/g, '').slice(0, 40);
+    if (!id) throw new Error(`El perfil ${index + 1} necesita un ID.`);
+    if (!label) throw new Error(`El perfil ${index + 1} necesita un nombre.`);
+    if (ids.has(id)) throw new Error(`ID de perfil duplicado: ${id}`);
+    ids.add(id);
+    if (phoneNumberId) {
+      if (phoneIds.has(phoneNumberId)) throw new Error(`Phone Number ID duplicado: ${phoneNumberId}`);
+      phoneIds.add(phoneNumberId);
+    }
+    return {
+      id,
+      label,
+      displayPhone,
+      phoneNumberId,
+      enabled: profile?.enabled !== false,
+      knowledgeBase: validateKnowledgeBase(profile?.knowledgeBase || defaultKnowledgeBase())
+    };
+  });
+  return profiles;
+}
+
+function getNumberProfiles() {
+  const raw = readJson(NUMBER_PROFILES_FILE, { profiles: initialProfiles() });
+  try {
+    return validateNumberProfiles(raw);
+  } catch (_) {
+    const fallback = initialProfiles();
+    atomicWriteJson(NUMBER_PROFILES_FILE, { profiles: fallback });
+    return fallback;
+  }
+}
+
+function saveNumberProfiles(input) {
+  const profiles = validateNumberProfiles(input);
+  atomicWriteJson(NUMBER_PROFILES_FILE, { profiles });
+  return profiles;
+}
+
+function getNumberProfileById(profileId) {
+  const id = String(profileId || 'default').trim();
+  return getNumberProfiles().find(profile => profile.id === id) || null;
+}
+
+function getNumberProfileByPhoneNumberId(phoneNumberId) {
+  const id = String(phoneNumberId || '').trim();
+  if (!id) return null;
+  return getNumberProfiles().find(profile => profile.phoneNumberId === id) || null;
+}
+
+function getKnowledgeBase(profileId = 'default') {
+  const profile = getNumberProfileById(profileId);
+  if (profile) return structuredClone(profile.knowledgeBase);
+  return validateKnowledgeBase(getLegacyKnowledgeBase());
+}
+
+function saveKnowledgeBase(input, profileId = 'default') {
   const validated = validateKnowledgeBase(input);
-  atomicWriteJson(KNOWLEDGE_FILE, validated);
+  const profiles = getNumberProfiles();
+  const index = profiles.findIndex(profile => profile.id === String(profileId || 'default'));
+  if (index >= 0) {
+    profiles[index].knowledgeBase = validated;
+    saveNumberProfiles(profiles);
+  }
+  if (profileId === 'default') atomicWriteJson(KNOWLEDGE_FILE, validated);
   return validated;
 }
 
@@ -111,16 +200,23 @@ function upsertCustomer(phone, displayName = '') {
   return customer;
 }
 
-function getOrCreateConversation(phone, displayName = '') {
+function getOrCreateConversation(phone, displayName = '', options = {}) {
+  const profileId = String(options.profileId || 'default');
+  const businessPhoneNumberId = String(options.phoneNumberId || '');
   const customer = upsertCustomer(phone, displayName);
   const store = loadStore();
-  let conversation = store.conversations.find(item => item.customerId === customer.id && item.status !== 'closed');
+  let conversation = store.conversations.find(item => item.customerId === customer.id && item.status !== 'closed' && String(item.profileId || 'default') === profileId);
   if (!conversation) {
     conversation = {
       id: id('con'), customerId: customer.id, phone, displayName: customer.displayName,
+      profileId, businessPhoneNumberId,
       status: 'open', messages: [], createdAt: nowIso(), updatedAt: nowIso(), lastInteractionAt: nowIso()
     };
     store.conversations.push(conversation);
+    saveStore(store);
+  } else if (businessPhoneNumberId && conversation.businessPhoneNumberId !== businessPhoneNumberId) {
+    conversation.businessPhoneNumberId = businessPhoneNumberId;
+    conversation.updatedAt = nowIso();
     saveStore(store);
   }
   return conversation;
@@ -173,6 +269,12 @@ function getStats() {
 module.exports = {
   getKnowledgeBase,
   saveKnowledgeBase,
+  validateKnowledgeBase,
+  getNumberProfiles,
+  saveNumberProfiles,
+  validateNumberProfiles,
+  getNumberProfileById,
+  getNumberProfileByPhoneNumberId,
   getOrCreateConversation,
   appendMessage,
   listConversations,
